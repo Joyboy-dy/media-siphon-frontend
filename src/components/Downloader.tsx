@@ -9,6 +9,7 @@ import { Input } from "./ui/Input";
 import { Card, CardContent } from "./ui/Card";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000").replace(/\/$/, "");
+const API_TOKEN = import.meta.env.VITE_API_TOKEN;
 
 const FORMAT_OPTIONS = {
   mp4: {
@@ -111,7 +112,9 @@ export default function Downloader({ platform, accentColor, title }: Props) {
 
     pollingIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/tasks?client_id=${clientId}`);
+        const headers: Record<string, string> = {};
+        if (API_TOKEN) headers["Authorization"] = `Bearer ${API_TOKEN}`;
+        const response = await fetch(`${API_BASE}/api/tasks?client_id=${clientId}`, { headers });
         if (!response.ok) return;
         const data = (await response.json()) as { tasks?: Task[] };
         const newTasks = data.tasks || [];
@@ -149,7 +152,9 @@ export default function Downloader({ platform, accentColor, title }: Props) {
 
   async function fetchTasks() {
     try {
-      const response = await fetch(`${API_BASE}/api/tasks?client_id=${clientId}`);
+      const headers: Record<string, string> = {};
+      if (API_TOKEN) headers["Authorization"] = `Bearer ${API_TOKEN}`;
+      const response = await fetch(`${API_BASE}/api/tasks?client_id=${clientId}`, { headers });
       if (!response.ok) return;
       const data = (await response.json()) as { tasks?: Task[] };
       const newTasks = data.tasks || [];
@@ -176,12 +181,15 @@ export default function Downloader({ platform, accentColor, title }: Props) {
     setInfoLoading(true);
 
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Client-Id": clientId
+      };
+      if (API_TOKEN) headers["Authorization"] = `Bearer ${API_TOKEN}`;
+
       const response = await fetch(`${API_BASE}/api/video-info`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Client-Id": clientId
-        },
+        headers,
         body: JSON.stringify({ url, client_id: clientId })
       });
 
@@ -210,12 +218,15 @@ export default function Downloader({ platform, accentColor, title }: Props) {
     setDownloadLoading(true);
 
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Client-Id": clientId
+      };
+      if (API_TOKEN) headers["Authorization"] = `Bearer ${API_TOKEN}`;
+
       const response = await fetch(`${API_BASE}/api/download`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Client-Id": clientId
-        },
+        headers,
         body: JSON.stringify({
           url,
           format,
@@ -237,6 +248,29 @@ export default function Downloader({ platform, accentColor, title }: Props) {
       setError((err as Error).message || "Unexpected error.");
     } finally {
       setDownloadLoading(false);
+    }
+  }
+
+  async function handleDownload(taskId: string, filename: string) {
+    try {
+      const headers: Record<string, string> = {};
+      if (API_TOKEN) headers["Authorization"] = `Bearer ${API_TOKEN}`;
+
+      const res = await fetch(`${API_BASE}/api/download/${taskId}?client_id=${clientId}`, { headers });
+      if (!res.ok) throw new Error("Download failed");
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error(e);
+      setError("Download failed. Please try again.");
     }
   }
 
@@ -355,9 +389,12 @@ export default function Downloader({ platform, accentColor, title }: Props) {
 
             <div>
               {task.status === "done" ? (
-                <a href={`${API_BASE}/api/download/${task.id}?client_id=${clientId}`} className="btn btn-secondary btn-sm">
+                <button
+                  onClick={() => handleDownload(task.id, task.filename_actual || "download")}
+                  className="btn btn-secondary btn-sm"
+                >
                   Download
-                </a>
+                </button>
               ) : (
                 <span className="status-pill">{STATUS_LABELS[task.status] || task.status}</span>
               )}
