@@ -392,6 +392,7 @@ export default function Downloader({ platform, accentColor, title }: Props) {
                 <button
                   onClick={() => handleDownload(task.id, task.filename_actual || "download")}
                   className="btn btn-secondary btn-sm"
+                  style={{ backgroundColor: "white", color: "black", border: "1px solid #e1e1e1" }}
                 >
                   Download
                 </button>

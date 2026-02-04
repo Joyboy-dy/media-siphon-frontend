@@ -18,13 +18,12 @@ export default function App() {
           </div>
 
           <a
-            href="https://github.com/your-repo"
+            href="https://github.com/Joyboy-dy/media-siphon-frontend"
             target="_blank"
             rel="noopener noreferrer"
             className="icon-button has-tooltip"
             data-tooltip="GitHub"
             aria-label="GitHub"
-            title="GitHub"
           >
             <FaGithub aria-hidden={true} focusable={false} />
           </a>
